@@ -1,8 +1,8 @@
 /* eslint no-use-before-define: ["error", { "variables": false }] */
 import PropTypes from 'prop-types';
 import React from 'react';
-import { Linking, StyleSheet, Text, View, ViewPropTypes } from 'react-native';
-
+import { Linking, StyleSheet, Text, View, ViewPropTypes, WebView, Modal, TouchableOpacity, Image } from 'react-native';
+import Icon from 'react-native-vector-icons/EvilIcons'
 import ParsedText from 'react-native-parsed-text';
 import Communications from 'react-native-communications';
 
@@ -15,23 +15,38 @@ export default class MessageText extends React.Component {
     this.onUrlPress = this.onUrlPress.bind(this);
     this.onPhonePress = this.onPhonePress.bind(this);
     this.onEmailPress = this.onEmailPress.bind(this);
+    this.viewBrowserLink = this.viewBrowserLink.bind(this);
+    this.hideBrowserLink = this.hideBrowserLink.bind(this);
+    this.state = {
+      url: '',
+      showModal: false
+    }
   }
 
   onUrlPress(url) {
     // When someone sends a message that includes a website address beginning with "www." (omitting the scheme),
     // react-native-parsed-text recognizes it as a valid url, but Linking fails to open due to the missing scheme.
     if (WWW_URL_PATTERN.test(url)) {
-      this.onUrlPress(`http://${url}`);
+      this.viewBrowserLink(`http://${url}`);
     } else {
       Linking.canOpenURL(url).then((supported) => {
         if (!supported) {
           // eslint-disable-next-line
           console.error('No handler for URL:', url);
         } else {
-          Linking.openURL(url);
+          this.viewBrowserLink(url);
         }
       });
     }
+  }
+
+  viewBrowserLink(url) {
+    this.setState({url: url});
+    this.setState({showModal: true});
+  }
+
+  hideBrowserLink() {
+    this.setState({showModal: false})
   }
 
   onPhonePress(phone) {
@@ -66,6 +81,7 @@ export default class MessageText extends React.Component {
       styles[this.props.position].link,
       this.props.linkStyle[this.props.position],
     ]);
+
     return (
       <View
         style={[
@@ -89,10 +105,40 @@ export default class MessageText extends React.Component {
         >
           {this.props.currentMessage.text}
         </ParsedText>
+
+        <Modal
+              animationType={"slide"}
+              visible={this.state.showModal}
+              transparent={false}
+              onRequestClose={this.hideBrowserLink} {...this.props}
+          >
+              <Image source={require('../../../../mynet/src/assets/img/dashboard_header_bak.png')} 
+              style={{height: 100, width: '100%'}}>
+                  <TouchableOpacity style={{
+                      right: 20,
+                      top: 25,
+                      position: 'absolute',
+                      zIndex: 1,
+                      backgroundColor: 'transparent',
+                  }} onPress={() => {
+                      this.hideBrowserLink();
+                  }}>
+                      <Icon name="close" size={45} color={'#ffffff'}/>
+                  </TouchableOpacity>
+              </Image>
+              <WebView
+                  ref='WEBVIEW_REF'
+                  scalesPageToFit={true}
+                  source={{uri: this.state.url}}
+                  style={{marginTop: 0}}
+                  onBack={() => {
+                      this.hideBrowserLink();
+                  }}
+              />
+          </Modal>
       </View>
     );
   }
-
 }
 
 const textStyle = {
